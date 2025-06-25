@@ -1,0 +1,75 @@
+.icon{
+    text-align: center;
+}
+.inputDiv{
+    margin-top: 150px;
+    text-align: center;
+}
+.input{
+    display: block;
+    border: 2px solid gray;
+    outline: none;
+    height: 30px;
+    width: 250px;
+}
+.inputParent{
+    display: grid;
+    place-items: center;
+}
+.arrow:hover{
+    cursor: pointer;
+}
+.playBtnDiv{
+    display: grid;
+    place-items: center;
+}
+.playBtn{
+    margin-top: 40px;
+    border: none;
+    color: #fff;
+    background-color: #67ff26;
+    font-size: 30px;
+    height: 50px;
+    width: 200px;
+    border-radius: 1rem;
+    transition: 200ms ease-in-out;
+    display: block;
+}
+.playBtn:hover{
+    background-color: #00c750;
+    cursor: pointer;
+}
+.hostBtn{
+    margin-top: 10px;
+    border: none;
+    color: #fff;
+    background-color: #bf48ff;
+    font-size: 30px;
+    height: 50px;
+    width: 200px;
+    border-radius: 1rem;
+    transition: 200ms ease-in-out;
+}
+.hostBtn:hover{
+    background-color: #a600ff;
+    cursor: pointer;
+}
+@media(max-width: 500px){
+    .icon{
+        text-align: center;
+        transform: scale(0.5);
+    }
+}
+.gameInfo{
+    display:none;
+}
+.playerInfo{
+    height: 50px;
+    margin-top: 5px;
+    background-color: bisque;
+    margin-bottom:5px;
+}
+.playerInfoParagraph{
+    display:inline-block;
+    transform: translateY(-20px);
+}
