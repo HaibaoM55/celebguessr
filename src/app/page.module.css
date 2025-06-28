@@ -61,15 +61,109 @@
     }
 }
 .gameInfo{
+    height: max-content;
+    margin-bottom: 50px;
     display:none;
 }
 .playerInfo{
+    list-style-type: none;
     height: 50px;
     margin-top: 5px;
-    background-color: bisque;
+    background-color: #fff;
     margin-bottom:5px;
+    
 }
 .playerInfoParagraph{
     display:inline-block;
     transform: translateY(-20px);
+}
+.knowsceleb{
+    height: 50px;
+    width: 50px;
+    display: inline-block;
+    transform: translateY(20px);
+}
+.playerInfoDialogue{
+    background-color: #f4f4f4;
+}
+.time{
+    position: fixed;
+    top: 100px;
+    right: 20px;
+}
+.clockImg{
+    transform: translateY(15px);
+}
+.DialogueBox {
+    display: inline-block;
+    transition: 200ms ease-in-out;
+    transform: translateY(-20px);
+    background-color: #b3b3b3;
+    color: #000;
+    padding: 12px 16px;
+    border-radius: 16px;
+    width: fit-content;
+    margin: 10px;
+    position: relative;
+    font-family: sans-serif;
+    font-size: 16px;
+    line-height: 1.4;
+    transition: 200ms ease-in-out;
+}
+.DialogueBox::after {
+    content: "";
+    position: absolute;
+    left: -17px;
+    bottom: 10px;
+    width: 0;
+    height: 0;
+    border: 10px solid transparent;
+    border-right-color: #b3b3b3;
+}
+
+@media (max-width: 600px) {
+    .playerInfo{
+        margin-left: 0px;
+    }
+    .DialogueBox{
+        display: block;
+        margin-top: 20px;
+        margin-bottom: 50px;
+    }
+    .playerInfo{
+        margin-top: 50px;
+    }
+}
+.textInputDiv{
+    position:fixed;
+    bottom:0px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+.textInputBox{
+    font-weight: 500;
+    font-size: .8vw;
+    color: #fff;
+    background-color: rgb(28,28,30);
+    border-radius: 0.4vw;
+    border: none;
+    outline: none;
+    padding: 0.4vw;
+    width: 400px;
+    height: 60px;
+    transition: .4s;
+    margin-bottom: 10px;
+}
+.textInputBox:focus {
+    box-shadow: 0 0 0 .25vw #6d6d6d;
+}
+.enterBtn{
+    position: relative;
+    top: 15px;
+    right: 50px;
+    border:none;
+    background: none;   
+}
+.enterBtn:hover{
+    cursor:pointer;
 }

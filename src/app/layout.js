@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: "CelebGuessr",
-  description: "A deduction game.",
+  description: "A celebrity guessing game!",
 };
 
 export default function RootLayout({ children }) {

@@ -25,6 +25,7 @@ const addPlayer = async (gameId, playerId, profile, numid = 0) => {
             pfp: profile,
             isHost: false,
             numid: numid,
+            isInCurrentGame: false,
             word: "",
         });
         console.log("Player added!");
@@ -66,7 +67,10 @@ export default function Home() {
     const [game, setGame] = useState({});
     const [players, setPlayers] = useState([]);
     const [nameInput, setNameInput] = useState("");
-
+    const [pressedPlay, setPressedPlay] = useState(false);
+    const [isGamePlayed, setIsGamePlayed] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [timeLeft, setTimeLeft] = useState("59");
     useEffect(() => {
         if (userPfpNumber < 1) {
             setUserPfpNumber(6);
@@ -111,19 +115,62 @@ export default function Home() {
                 alert("Somebody else already has that name!");
             }else if(nameInput == ""){
                 alert("Please set a name!")
-            }
-            else {
+            }else if(nameInput.length > 16){
+                alert("Username cannot exceed 16 characters")
+            }else{
                 const maxNumId = Math.max(
                     ...players.map((p) => p.numid),
                     -1
                 );
                 addPlayer(gameId, nameInput, userPfpNumber, maxNumId + 1);
+                setPressedPlay(true);
                 document.getElementById("inputDiv").style.display = "none";
                 document.getElementById("gameInfo").style.display = "block";
             }
+        }else{
+            alert("The maximum player capacity has been reached!")
         }
     }
-
+    function start(){
+        if(players.length >= 2){
+            var lastToKnowCeleb = -1;
+            var biggestNumId = 0;
+            var smallestNumId = players[0].numid;
+            for(var i = 0; i < players.length; i++) {
+                const playerRef = doc(db, "games", gameId, "players", players[i].id);
+                setDoc(playerRef, { isInCurrentGame: true }, { merge: true })
+                if(players[i].knowsceleb){
+                    lastToKnowCeleb = players[i].numid;
+                    setDoc(playerRef, { knowsceleb: false }, { merge: true })
+                }
+                if(biggestNumId < players[i].numid){
+                    biggestNumId = players[i].numid
+                }
+                if(smallestNumId > players[i].numid){
+                    smallestNumId = players[i].numid;
+                }
+            }
+            if(lastToKnowCeleb == -1){
+                lastToKnowCeleb = smallestNumId-1;   
+            }
+            if(lastToKnowCeleb >= biggestNumId){
+                lastToKnowCeleb = smallestNumId-1;
+            }
+            for(var i = 0; i < players.length; i++){
+                if(players[i].numid == lastToKnowCeleb+1){
+                    const playerRef = doc(db, "games", gameId, "players", players[i].id);
+                    setDoc(playerRef, { knowsceleb: true }, { merge: true })
+                }
+            }
+            const documentRef = doc(db, "games", gameId)
+            let milliseconds = new Date().valueOf();
+            let seconds = Math.floor( milliseconds / 1000);
+            setDoc(documentRef, { roundStartTime:  seconds})
+            setTimeLeft(60)
+        }else{
+            alert("At least 2 players are needed in order to play!")
+        }
+    }
     // Remove player ONLY when tab is closed or refreshed
     useEffect(() => {
         const handleBeforeUnload = (event) => {
@@ -181,17 +228,43 @@ export default function Home() {
         }
         );
     }, [players, gameId]);
+    const [isHost, setIsHost] = useState(false)
+    useEffect(() => {
+        for(var i = 0; i < players.length; i++) {
+            if (players[i].id == nameInput){
+                setIsHost(players[i].isHost);
+            }
+            setIsGamePlayed(false);
+            setIsPlaying(false);
+            if(players[i].isInCurrentGame){
+                setIsGamePlayed(true);
+                if(players[i].id == nameInput){
+                    setIsPlaying(true);
+                }
+            }
+        }
+    }, [players]);
+    useEffect(() => {
+        if(pressedPlay == true){
+            document.getElementById("textInputDiv").style.display = "block";
+        }else{
+            document.getElementById("textInputDiv").style.display = "none";
+        }
+    }, [pressedPlay])
     return (
         <div>
             <div className={styles.icon}>
                 <Image src="/icon.png" height={100} width={500} alt="icon" />
             </div>
-
             {game ? (
                 <div id = "gameInfo" className={styles.gameInfo}>
-                    <p>Status: {game.isPublic ? "Public" : "Private"}</p>
+                    {(isGamePlayed) ? (
+                        <div className={styles.time}>
+                            <Image src = {"/clock.png"} alt = {"clock"} height={50} width={50} className={styles.clockImg} />
+                            {timeLeft}
+                        </div>
+                    ) : (<></>)}
                     <div>
-                        Players:
                         <ul>
                             {players.map((player) => (
                                 <li key={player.id} className={styles.playerInfo}>
@@ -204,13 +277,17 @@ export default function Home() {
                                     />
                                     <div className={styles.playerInfoParagraph}>
                                         {player.id}
-                                        #{player.numid}
                                         {player.id == nameInput ? " (You)": ""}
-                                        {player.isHost ? " (Host)" : ""}:
+                                        {player.isHost ? " (Host)" : ""}
                                         {player.knowsceleb
-                                            ? "knows the celebrity: true"
-                                            : "knows the celebrity: false"};
+                                            ? <Image className={styles.knowsceleb} alt = {`knoesceleb.png`} width={50} height={50} src = {`/knowsceleb.png`}></Image>
+                                            : ""}
                                     </div>
+                                    {(player.word != "") ? (
+                                        <div className={styles.DialogueBox} id = "dialogue_box">
+                                            {player.word}
+                                        </div>
+                                    ) : (<></>)}
                                 </li>
                             ))}
                         </ul>
@@ -219,8 +296,41 @@ export default function Home() {
             ) : (
                 <p>Loading...</p>
             )}
-
-            <div className={styles.inputDiv} id = "inputDiv">
+            <div className={styles.textInputDiv} id = "textInputDiv">
+                <input
+                type = "text"
+                placeholder=""
+                id = "textInputBox"
+                onKeyUp={(event) => {
+                    if (event.key === "Enter") {
+                        const playerRef = doc(db, "games", gameId, "players", nameInput);
+                        setDoc(playerRef, { word: document.getElementById("textInputBox").value }, { merge: true })
+                        setTimeout(() => {
+                            const playerRef = doc(db, "games", gameId, "players", nameInput);
+                            setDoc(playerRef, { word: "" }, { merge: true })
+                        }, 5000)
+                    }
+                }}
+                className={styles.textInputBox}
+                ></input>
+                <button onClick = {() =>{
+                        const playerRef = doc(db, "games", gameId, "players", nameInput);
+                        setDoc(playerRef, { word: document.getElementById("textInputBox").value }, { merge: true })
+                        setTimeout(() => {
+                            const playerRef = doc(db, "games", gameId, "players", nameInput);
+                            setDoc(playerRef, { word: "" }, { merge: true })
+                        }, 5000)
+                    }
+                } className={styles.enterBtn}>
+                    <Image src = {`/sendmsg.png`}
+                    alt = "Send"
+                    height={50}
+                    width={50}
+                    />
+                </button>
+            </div>
+            {pressedPlay ? (<></>):
+            (<div className={styles.inputDiv} id = "inputDiv">
                 <div className={styles.inputParent}>
                     <input
                         className={styles.input}
@@ -259,7 +369,19 @@ export default function Home() {
                         Play
                     </button>
                 </div>
-            </div>
+            </div>)}
+            {isHost ? (
+                <>
+                {isGamePlayed ? (<></>) : 
+                    (<div className = {styles.hostInfo}>
+                        <div className = {styles.playBtnDiv}>
+                            <button className = {styles.playBtn} onClick = {start}>
+                                Start
+                            </button>
+                        </div>
+                    </div>)}
+                </>
+            ) : (<></>)}
         </div>
     );
 }
