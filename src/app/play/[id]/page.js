@@ -23,9 +23,9 @@ const addPlayer = async (gameId, playerId, profile, numid = 0) => {
             guessed: false,
             score: 0,
             pfp: profile,
+            isInCurrentGame: false,
             isHost: false,
             numid: numid,
-            isInCurrentGame: false,
             word: "",
         });
         console.log("Player added!");
@@ -45,6 +45,7 @@ const getGame = (gameId, onUpdate = () => { }, onError = () => { }) => {
                 onUpdate({
                     id: docSnap.id,
                     isPublic: data.public,
+                    word: data.word,
                 });
             } else {
                 onError("Game not found.");
@@ -69,8 +70,9 @@ export default function Home() {
     const [nameInput, setNameInput] = useState("");
     const [pressedPlay, setPressedPlay] = useState(false);
     const [isGamePlayed, setIsGamePlayed] = useState(false);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [timeLeft, setTimeLeft] = useState("59");
+    const [timeLeft, setTimeLeft] = useState(60);
+    const [writeCeleb, setWriteCeleb] = useState(false);
+    const [correctWord, setCorrectWord] = useState("");
     useEffect(() => {
         if (userPfpNumber < 1) {
             setUserPfpNumber(6);
@@ -107,7 +109,9 @@ export default function Home() {
 
         return () => unsubscribe();
     }, [gameId]);
-
+    useEffect(() => {
+        setCorrectWord(game.word);
+    }, [game])
     function play() {
         if (players.length < maxPlayers) {
             const exists = players.some((p) => p.id === nameInput);
@@ -133,12 +137,14 @@ export default function Home() {
     }
     function start(){
         if(players.length >= 2){
+            setCorrectWord("")
+            const documentRef = doc(db, "games", gameId);
+            setDoc(documentRef, {word: ""})
             var lastToKnowCeleb = -1;
             var biggestNumId = 0;
             var smallestNumId = players[0].numid;
             for(var i = 0; i < players.length; i++) {
                 const playerRef = doc(db, "games", gameId, "players", players[i].id);
-                setDoc(playerRef, { isInCurrentGame: true }, { merge: true })
                 if(players[i].knowsceleb){
                     lastToKnowCeleb = players[i].numid;
                     setDoc(playerRef, { knowsceleb: false }, { merge: true })
@@ -159,14 +165,22 @@ export default function Home() {
             for(var i = 0; i < players.length; i++){
                 if(players[i].numid == lastToKnowCeleb+1){
                     const playerRef = doc(db, "games", gameId, "players", players[i].id);
+                    players[i].knowsceleb = true;
                     setDoc(playerRef, { knowsceleb: true }, { merge: true })
+                    setDoc(playerRef, { isInCurrentGame: true}, {merge: true})
                 }
             }
-            const documentRef = doc(db, "games", gameId)
-            let milliseconds = new Date().valueOf();
-            let seconds = Math.floor( milliseconds / 1000);
-            setDoc(documentRef, { roundStartTime:  seconds})
-            setTimeLeft(60)
+            for(var i = 0; i < players.length; i++) {
+                const playerRef = doc(db, "games", gameId, "players", players[i].id);
+                setDoc(playerRef, {isInCurrentGame: true}, {merge: true})
+                if (players[i].id == nameInput){
+                    alert(players[i].knowsceleb)
+                    alert(correctWord)
+                    if(players[i].knowsceleb && correctWord == ""){
+                        setWriteCeleb(true);
+                    }
+                }
+            }
         }else{
             alert("At least 2 players are needed in order to play!")
         }
@@ -191,9 +205,6 @@ export default function Home() {
             window.removeEventListener("beforeunload", handleBeforeUnload);
         };
     }, [gameId, nameInput]);
-
-    //Player with smallest numid is host
-
     useEffect(() => {
         if (players.length === 0 || !gameId) return; 
         var minimumNumId = -1, minimumNumIdI;
@@ -213,7 +224,6 @@ export default function Home() {
                 console.error("Error updating host:", error);
             }
         );
-        // Set all other players to not host
         players.forEach((player) => {
             if (player.id !== hostId) {
                 const playerRef = doc(db, "games", gameId, "players", player.id);
@@ -230,16 +240,25 @@ export default function Home() {
     }, [players, gameId]);
     const [isHost, setIsHost] = useState(false)
     useEffect(() => {
+        setIsGamePlayed(false);
         for(var i = 0; i < players.length; i++) {
             if (players[i].id == nameInput){
                 setIsHost(players[i].isHost);
             }
-            setIsGamePlayed(false);
-            setIsPlaying(false);
             if(players[i].isInCurrentGame){
                 setIsGamePlayed(true);
-                if(players[i].id == nameInput){
-                    setIsPlaying(true);
+            }
+        }
+        if(isGamePlayed){
+            for(var i = 0; i < players.length; i++) {
+                const playerRef = doc(db, "games", gameId, "players", players[i].id);
+                setDoc(playerRef, {isInCurrentGame: true}, {merge: true})
+                if (players[i].id == nameInput){
+                    alert(players[i].knowsceleb)
+                    alert(correctWord)
+                    if(players[i].knowsceleb && correctWord == ""){
+                        setWriteCeleb(true);
+                    }
                 }
             }
         }
@@ -303,12 +322,23 @@ export default function Home() {
                 id = "textInputBox"
                 onKeyUp={(event) => {
                     if (event.key === "Enter") {
-                        const playerRef = doc(db, "games", gameId, "players", nameInput);
-                        setDoc(playerRef, { word: document.getElementById("textInputBox").value }, { merge: true })
-                        setTimeout(() => {
+                        if(writeCeleb){
+                            const documentRef = doc(db, "games", gameId);
+                            let milliseconds = new Date().valueOf();
+                            let seconds = Math.floor( milliseconds / 1000);
+                            setDoc(documentRef, { roundStartTime:  seconds})
+                            setDoc(documentRef, { word: document.getElementById("textInputBox").value })
+                            document.getElementById("textInputBox").value = "";
+                            setWriteCeleb(false);
+                        }else{
                             const playerRef = doc(db, "games", gameId, "players", nameInput);
-                            setDoc(playerRef, { word: "" }, { merge: true })
-                        }, 5000)
+                            setDoc(playerRef, { word: document.getElementById("textInputBox").value }, { merge: true })
+                            document.getElementById("textInputBox").value = "";
+                            setTimeout(() => {
+                                const playerRef = doc(db, "games", gameId, "players", nameInput);
+                                setDoc(playerRef, { word: "" }, { merge: true })
+                            }, 5000)
+                        }
                     }
                 }}
                 className={styles.textInputBox}
@@ -316,6 +346,7 @@ export default function Home() {
                 <button onClick = {() =>{
                         const playerRef = doc(db, "games", gameId, "players", nameInput);
                         setDoc(playerRef, { word: document.getElementById("textInputBox").value }, { merge: true })
+                        document.getElementById("textInputBox").value = "";
                         setTimeout(() => {
                             const playerRef = doc(db, "games", gameId, "players", nameInput);
                             setDoc(playerRef, { word: "" }, { merge: true })
@@ -363,7 +394,6 @@ export default function Home() {
                         onClick={() => setUserPfpNumber(userPfpNumber + 1)}
                     />
                 </div>
-
                 <div className={styles.playBtnDiv}>
                     <button className={styles.playBtn} onClick={play}>
                         Play
