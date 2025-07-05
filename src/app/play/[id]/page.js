@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import styles from "../../page.module.css";
-import { useState, useEffect } from "react";
-import { db } from "../../firebaseconfig.js";
+import { useState, useEffect, use } from "react";
+import db from "../../firebaseconfig.js";
 import {
     collection,
     doc,
@@ -46,6 +46,7 @@ const getGame = (gameId, onUpdate = () => { }, onError = () => { }) => {
                     id: docSnap.id,
                     isPublic: data.public,
                     word: data.word,
+                    known_word: data.known_word,
                 });
             } else {
                 onError("Game not found.");
@@ -72,7 +73,10 @@ export default function Home() {
     const [isGamePlayed, setIsGamePlayed] = useState(false);
     const [timeLeft, setTimeLeft] = useState(60);
     const [writeCeleb, setWriteCeleb] = useState(false);
+    const [canWrite, setCanWrite] = useState(true);
     const [correctWord, setCorrectWord] = useState("");
+    const [centerText, setCenterText] = useState("");
+    const [knowsCeleb, setKnowsCeleb] = useState(false);
     useEffect(() => {
         if (userPfpNumber < 1) {
             setUserPfpNumber(6);
@@ -111,6 +115,9 @@ export default function Home() {
     }, [gameId]);
     useEffect(() => {
         setCorrectWord(game.word);
+        if(!knowsCeleb){
+
+        }
     }, [game])
     function play() {
         if (players.length < maxPlayers) {
@@ -174,10 +181,14 @@ export default function Home() {
                 const playerRef = doc(db, "games", gameId, "players", players[i].id);
                 setDoc(playerRef, {isInCurrentGame: true}, {merge: true})
                 if (players[i].id == nameInput){
-                    alert(players[i].knowsceleb)
-                    alert(correctWord)
-                    if(players[i].knowsceleb && correctWord == ""){
-                        setWriteCeleb(true);
+                    if(players[i].knowsceleb){
+                        setKnowsCeleb(true);
+                        if(correctWord == ""){
+                            setWriteCeleb(true);
+                            setCenterText("Write the celebrity's name")
+                        }
+                    }else{
+                        setKnowsCeleb(false);
                     }
                 }
             }
@@ -205,6 +216,8 @@ export default function Home() {
             window.removeEventListener("beforeunload", handleBeforeUnload);
         };
     }, [gameId, nameInput]);
+    //Verifica daca se schimba 'word' in Firestore
+    
     useEffect(() => {
         if (players.length === 0 || !gameId) return; 
         var minimumNumId = -1, minimumNumIdI;
@@ -254,8 +267,6 @@ export default function Home() {
                 const playerRef = doc(db, "games", gameId, "players", players[i].id);
                 setDoc(playerRef, {isInCurrentGame: true}, {merge: true})
                 if (players[i].id == nameInput){
-                    alert(players[i].knowsceleb)
-                    alert(correctWord)
                     if(players[i].knowsceleb && correctWord == ""){
                         setWriteCeleb(true);
                     }
@@ -285,6 +296,9 @@ export default function Home() {
                     ) : (<></>)}
                     <div>
                         <ul>
+                        <div className={styles.centerText}>
+                            {centerText}
+                        </div>
                             {players.map((player) => (
                                 <li key={player.id} className={styles.playerInfo}>
                                     <Image
@@ -328,15 +342,18 @@ export default function Home() {
                             let seconds = Math.floor( milliseconds / 1000);
                             setDoc(documentRef, { roundStartTime:  seconds})
                             setDoc(documentRef, { word: document.getElementById("textInputBox").value })
-                            document.getElementById("textInputBox").value = "";
+                            setCenterText(document.getElementById("textInputBox").value);
                             setWriteCeleb(false);
-                        }else{
+                            document.getElementById("textInputBox").value = "";
+                        }else if(canWrite){
                             const playerRef = doc(db, "games", gameId, "players", nameInput);
                             setDoc(playerRef, { word: document.getElementById("textInputBox").value }, { merge: true })
                             document.getElementById("textInputBox").value = "";
+                            setCanWrite(false);
                             setTimeout(() => {
                                 const playerRef = doc(db, "games", gameId, "players", nameInput);
                                 setDoc(playerRef, { word: "" }, { merge: true })
+                                setCanWrite(true);
                             }, 5000)
                         }
                     }
@@ -381,8 +398,8 @@ export default function Home() {
                     />
                     <Image
                         src={UserPfp}
-                        height={100}
-                        width={100}
+                        height={128}
+                        width={128}
                         alt="profile_picture"
                     />
                     <Image

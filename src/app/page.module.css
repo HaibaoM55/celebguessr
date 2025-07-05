@@ -69,7 +69,6 @@
     list-style-type: none;
     height: 50px;
     margin-top: 5px;
-    background-color: #fff;
     margin-bottom:5px;
     
 }
@@ -130,6 +129,9 @@
         margin-top: 20px;
         margin-bottom: 50px;
     }
+    .textInputBox{
+        font-size: 16px;
+    }
     .playerInfo{
         margin-top: 50px;
     }
@@ -143,7 +145,7 @@
 }
 .textInputBox{
     font-weight: 500;
-    font-size: .8vw;
+    font-size: 20px;
     color: #fff;
     background-color: rgb(28,28,30);
     border-radius: 0.4vw;
@@ -159,12 +161,27 @@
     box-shadow: 0 0 0 .25vw #6d6d6d;
 }
 .enterBtn{
-    position: relative;
-    top: 15px;
-    right: 50px;
+    position: fixed;
+    top: 5px;
+    right: 0px;
     border:none;
     background: none;   
 }
 .enterBtn:hover{
     cursor:pointer;
+}
+@media(max-width: 400px){
+    .textInputDiv{
+        max-width: 100%;
+    }
+}
+.centerText{
+    white-space: nowrap;
+    font-size: clamp(8px, 5vw, 50px); 
+    width: fit-content;
+    max-width: 100%; 
+    overflow: hidden;
+    margin-left: auto;
+    margin-right: auto;
+    transition: 300ms ease-in-out;
 }
