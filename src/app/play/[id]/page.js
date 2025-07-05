@@ -15,7 +15,7 @@ import {
 import { useParams } from "next/navigation";
 
 const maxPlayers = 10;
-
+//test
 const addPlayer = async (gameId, playerId, profile, numid = 0) => {
     try {
         await setDoc(doc(db, "games", gameId, "players", playerId), {
