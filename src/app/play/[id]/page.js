@@ -4,6 +4,7 @@ import Image from "next/image";
 import styles from "../../page.module.css";
 import { useState, useEffect, use } from "react";
 import db from "../../firebaseconfig.js";
+import {useInterval} from "../../useinterval"
 import {
     collection,
     doc,
@@ -46,7 +47,9 @@ const getGame = (gameId, onUpdate = () => { }, onError = () => { }) => {
                     id: docSnap.id,
                     isPublic: data.public,
                     word: data.word,
-                    known_word: data.known_word,
+                    roundStartTime: data.roundStartTime,
+                    isGamePlayed: data.isGamePlayed,
+                    knownword: data.knownword,
                 });
             } else {
                 onError("Game not found.");
@@ -60,7 +63,6 @@ const getGame = (gameId, onUpdate = () => { }, onError = () => { }) => {
 
     return unsubscribe;
 };
-
 export default function Home() {
     const { id: gameId } = useParams();
     const [userPfpNumber, setUserPfpNumber] = useState(1);
@@ -77,6 +79,12 @@ export default function Home() {
     const [correctWord, setCorrectWord] = useState("");
     const [centerText, setCenterText] = useState("");
     const [knowsCeleb, setKnowsCeleb] = useState(false);
+    const [yourScore, setYourScore] = useState(0);
+    const [startTime, setStartTime] = useState(0);
+    const [guessedRight, setGuessedRight] = useState(false);
+    const [knownWord, setKnownWord] = useState("");
+    const [isHost, setIsHost] = useState(false)
+    const [everyoneGuessedRight, setEveryoneGuessedRight] = useState(false);
     useEffect(() => {
         if (userPfpNumber < 1) {
             setUserPfpNumber(6);
@@ -113,12 +121,68 @@ export default function Home() {
 
         return () => unsubscribe();
     }, [gameId]);
-    useEffect(() => {
-        setCorrectWord(game.word);
-        if(!knowsCeleb){
-
+    function finishGame(){
+        const documentRef = doc(db, "games", gameId);
+        setDoc(documentRef, {word: "", knownword: "", isGamePlayed: false}, {merge: true});
+        for(var i = 0; i < players.length; i++){
+            const playerRef = doc(db, "games", gameId, "players", players[i].id)
+            setDoc(playerRef, {guessed: false, word: ""}, {merge: true});
         }
-    }, [game])
+    }
+    useEffect(() => {
+        var everyoneGuessd = true;
+        for(var i = 0; i < players.length; i++) {
+            if (players[i].id == nameInput){
+                setIsHost(players[i].isHost);
+            }
+            if(!players[i].guessed && !players[i].knowsceleb){
+                everyoneGuessd = false;
+            }
+        }
+        setEveryoneGuessedRight(everyoneGuessd);
+        if(isGamePlayed){
+            if(everyoneGuessd && isHost){
+                finishGame();
+            }
+        }else{
+            setGuessedRight(false);
+        }
+    }, [players, game]);
+    useEffect(() => {
+        setIsGamePlayed(game.isGamePlayed);
+        setCorrectWord(game.word);
+        setStartTime(game.roundStartTime);
+        setKnownWord(game.knownword);
+        for(var i = 0; i < players.length; i++){
+            if(players[i].id == nameInput){
+                if(game.word == "" && players[i].knowsceleb){
+                    setWriteCeleb(true);
+                }else{
+                    setWriteCeleb(false);
+                }
+            }
+        }
+        if(!isGamePlayed){
+            setCenterText("Waiting for the game to start")
+        }else if(!knowsCeleb && !guessedRight && isGamePlayed){
+            setCenterText(game.knownword)
+        }else if(isGamePlayed){
+            if(guessedRight){
+                setCenterText(game.word);
+            }else if(knowsCeleb){
+                if(game.word == ""){
+                    setCenterText("Write the celebrity's name")
+                }else{
+                    setCenterText(game.word);
+                }
+            }
+        }
+    }, [game, isGamePlayed, knowsCeleb, guessedRight, players, game])
+    useInterval(() => {
+        let milliseconds = new Date().valueOf();
+        let seconds = Math.floor( milliseconds / 1000);
+        setTimeLeft(150+startTime-seconds);
+    }, 1000)
     function play() {
         if (players.length < maxPlayers) {
             const exists = players.some((p) => p.id === nameInput);
@@ -144,9 +208,11 @@ export default function Home() {
     }
     function start(){
         if(players.length >= 2){
-            setCorrectWord("")
             const documentRef = doc(db, "games", gameId);
-            setDoc(documentRef, {word: ""})
+            setTimeLeft(30);
+            setDoc(documentRef, {knownword: "Waiting for celebrity name"},{merge: true})
+            setCorrectWord("")
+            setDoc(documentRef, {word: ""}, { merge: true });
             var lastToKnowCeleb = -1;
             var biggestNumId = 0;
             var smallestNumId = players[0].numid;
@@ -169,12 +235,12 @@ export default function Home() {
             if(lastToKnowCeleb >= biggestNumId){
                 lastToKnowCeleb = smallestNumId-1;
             }
+            setDoc(documentRef, {isGamePlayed: true}, {merge: true});
             for(var i = 0; i < players.length; i++){
                 if(players[i].numid == lastToKnowCeleb+1){
                     const playerRef = doc(db, "games", gameId, "players", players[i].id);
                     players[i].knowsceleb = true;
                     setDoc(playerRef, { knowsceleb: true }, { merge: true })
-                    setDoc(playerRef, { isInCurrentGame: true}, {merge: true})
                 }
             }
             for(var i = 0; i < players.length; i++) {
@@ -182,13 +248,9 @@ export default function Home() {
                 setDoc(playerRef, {isInCurrentGame: true}, {merge: true})
                 if (players[i].id == nameInput){
                     if(players[i].knowsceleb){
-                        setKnowsCeleb(true);
                         if(correctWord == ""){
-                            setWriteCeleb(true);
                             setCenterText("Write the celebrity's name")
                         }
-                    }else{
-                        setKnowsCeleb(false);
                     }
                 }
             }
@@ -216,8 +278,6 @@ export default function Home() {
             window.removeEventListener("beforeunload", handleBeforeUnload);
         };
     }, [gameId, nameInput]);
-    //Verifica daca se schimba 'word' in Firestore
-    
     useEffect(() => {
         if (players.length === 0 || !gameId) return; 
         var minimumNumId = -1, minimumNumIdI;
@@ -225,6 +285,11 @@ export default function Home() {
             if (players[i].numid < minimumNumId || minimumNumId == -1){
                 minimumNumId = players[i].numid;
                 minimumNumIdI = i;
+            }
+        }
+        for(var i = 0; i < players.length; i++){
+            if(players[i].id == nameInput){
+                setKnowsCeleb(players[i].knowsceleb)
             }
         }
         const hostId = players[minimumNumIdI].id;
@@ -251,29 +316,6 @@ export default function Home() {
         }
         );
     }, [players, gameId]);
-    const [isHost, setIsHost] = useState(false)
-    useEffect(() => {
-        setIsGamePlayed(false);
-        for(var i = 0; i < players.length; i++) {
-            if (players[i].id == nameInput){
-                setIsHost(players[i].isHost);
-            }
-            if(players[i].isInCurrentGame){
-                setIsGamePlayed(true);
-            }
-        }
-        if(isGamePlayed){
-            for(var i = 0; i < players.length; i++) {
-                const playerRef = doc(db, "games", gameId, "players", players[i].id);
-                setDoc(playerRef, {isInCurrentGame: true}, {merge: true})
-                if (players[i].id == nameInput){
-                    if(players[i].knowsceleb && correctWord == ""){
-                        setWriteCeleb(true);
-                    }
-                }
-            }
-        }
-    }, [players]);
     useEffect(() => {
         if(pressedPlay == true){
             document.getElementById("textInputDiv").style.display = "block";
@@ -281,14 +323,27 @@ export default function Home() {
             document.getElementById("textInputDiv").style.display = "none";
         }
     }, [pressedPlay])
+    useEffect(() => {
+        if(timeLeft <= 0){
+            if(isHost && isGamePlayed && correctWord != ""){
+                finishGame();
+            }
+        }
+    }, [timeLeft])
     return (
         <div>
+            {/* <h1>
+                DEBUG:<br />
+                isHost: {isHost ? isHost.toString() : "undefined"}<br />
+                isGamePlayed: {isGamePlayed ? isGamePlayed.toString() : "undefined"}<br />
+                everyoneGuessedRight: {everyoneGuessedRight ? everyoneGuessedRight.toString() : "undefined"}<br />
+            </h1> */}
             <div className={styles.icon}>
                 <Image src="/icon.png" height={100} width={500} alt="icon" />
             </div>
             {game ? (
                 <div id = "gameInfo" className={styles.gameInfo}>
-                    {(isGamePlayed) ? (
+                    {(isGamePlayed && (centerText != "Waiting for celebrity name" && centerText != "Write the celebrity's name" && !writeCeleb)) ? (                        
                         <div className={styles.time}>
                             <Image src = {"/clock.png"} alt = {"clock"} height={50} width={50} className={styles.clockImg} />
                             {timeLeft}
@@ -315,7 +370,28 @@ export default function Home() {
                                         {player.knowsceleb
                                             ? <Image className={styles.knowsceleb} alt = {`knoesceleb.png`} width={50} height={50} src = {`/knowsceleb.png`}></Image>
                                             : ""}
+                                        : 
+                                        {` ${player.score}`}
                                     </div>
+                                    {(isGamePlayed && !player.knowsceleb) ? (
+                                        <>
+                                            {(player.guessed) ? (
+                                                <Image 
+                                                src = "/check.png" 
+                                                alt = "check"
+                                                height={50} 
+                                                width={50}
+                                                ></Image>
+                                            ): (
+                                                <Image 
+                                                src = "/cross.png" 
+                                                alt = "cross"
+                                                height={50} 
+                                                width={50}
+                                                ></Image>
+                                            )}
+                                        </>
+                                    ) : (<></>)}
                                     {(player.word != "") ? (
                                         <div className={styles.DialogueBox} id = "dialogue_box">
                                             {player.word}
@@ -335,39 +411,140 @@ export default function Home() {
                 placeholder=""
                 id = "textInputBox"
                 onKeyUp={(event) => {
-                    if (event.key === "Enter") {
+                    if (event.key === "Enter"){
+                        const documentRef = doc(db, "games", gameId);
                         if(writeCeleb){
-                            const documentRef = doc(db, "games", gameId);
                             let milliseconds = new Date().valueOf();
                             let seconds = Math.floor( milliseconds / 1000);
-                            setDoc(documentRef, { roundStartTime:  seconds})
-                            setDoc(documentRef, { word: document.getElementById("textInputBox").value })
-                            setCenterText(document.getElementById("textInputBox").value);
-                            setWriteCeleb(false);
+                            setDoc(documentRef, { roundStartTime:  seconds}, {merge: true})
+                            const theword = document.getElementById("textInputBox").value.toUpperCase();
+                            setDoc(documentRef, { word: theword }, {merge: true})
+                            setCenterText(theword);
+                            var theknownword=""
+                            for(var i = 0; i < theword.length; i++){
+                                theknownword=theknownword+'_ '
+                            }
+                            setDoc(documentRef, { knownword: theknownword }, {merge: true})
+                            setWriteCeleb(false);        
                             document.getElementById("textInputBox").value = "";
                         }else if(canWrite){
                             const playerRef = doc(db, "games", gameId, "players", nameInput);
-                            setDoc(playerRef, { word: document.getElementById("textInputBox").value }, { merge: true })
+                            if(!guessedRight && isGamePlayed && document.getElementById("textInputBox").value.toUpperCase() == correctWord){
+                                setDoc(playerRef, {guessed: true}, {merge: true})
+                                var yourScoreProv =yourScore+timeLeft*2+50;
+                                setYourScore(yourScoreProv);
+                                setDoc(playerRef, {score: yourScoreProv}, {merge: true})
+                                for(var i = 0; i < players.length; i++){
+                                    if(players[i].knowsceleb){
+                                        const playerKnowsCelebRef = doc(db, "games", gameId, "players", players[i].id);
+                                        var playerKnowsCelebProvScore = players[i].score+timeLeft+50;
+                                        setDoc(playerKnowsCelebRef, {score: playerKnowsCelebProvScore}, {merge: true})
+                                    }
+                                }
+                                setGuessedRight(true);
+                                let modifiedWord = "";
+                                let lengthOfTheKnownWord =knownWord.length; 
+                                let didIModify=false;
+                                var underscoreNumber = 0;
+                                for(var i = 0; i < lengthOfTheKnownWord; i++){
+                                    if(knownWord[i] == '_'){
+                                        underscoreNumber++;
+                                    }
+                                }
+                                setCenterText(correctWord)
+                                if(underscoreNumber >= 2){
+                                    for (let i = 0; i < lengthOfTheKnownWord; i++) {
+                                        if (i % 2 === 0 && knownWord[i] === '_' && !didIModify){
+                                            modifiedWord += correctWord[Math.floor(i / 2)];
+                                            didIModify = true;
+                                        } else {
+                                            modifiedWord += knownWord[i];
+                                        }
+                                    }
+                                    setDoc(documentRef, {knownword: modifiedWord}, {merge:true});
+                                }
+                            }else if(document.getElementById("textInputBox").value.toUpperCase() == correctWord){
+                                alert("You cant spell it out for everyone >:(")
+                            }else{
+                                setDoc(playerRef, { word: document.getElementById("textInputBox").value }, { merge: true })
+                                setCanWrite(false);
+                                setTimeout(() => {
+                                    const playerRef = doc(db, "games", gameId, "players", nameInput);
+                                    setDoc(playerRef, { word: "" }, { merge: true })
+                                    setCanWrite(true);
+                                }, 1000+document.getElementById("textInputBox").value.length*50)
+                            }
                             document.getElementById("textInputBox").value = "";
-                            setCanWrite(false);
-                            setTimeout(() => {
-                                const playerRef = doc(db, "games", gameId, "players", nameInput);
-                                setDoc(playerRef, { word: "" }, { merge: true })
-                                setCanWrite(true);
-                            }, 5000)
                         }
                     }
                 }}
                 className={styles.textInputBox}
                 ></input>
                 <button onClick = {() =>{
-                        const playerRef = doc(db, "games", gameId, "players", nameInput);
-                        setDoc(playerRef, { word: document.getElementById("textInputBox").value }, { merge: true })
-                        document.getElementById("textInputBox").value = "";
-                        setTimeout(() => {
+                        const documentRef = doc(db, "games", gameId);
+                        if(writeCeleb){
+                            let milliseconds = new Date().valueOf();
+                            let seconds = Math.floor( milliseconds / 1000);
+                            setDoc(documentRef, { roundStartTime:  seconds}, {merge: true})
+                            const theword = document.getElementById("textInputBox").value.toUpperCase();
+                            setDoc(documentRef, { word: theword }, {merge: true})
+                            setCenterText(theword);
+                            var theknownword=""
+                            for(var i = 0; i < theword.length; i++){
+                                theknownword=theknownword+'_ '
+                            }
+                            setDoc(documentRef, { knownword: theknownword }, {merge: true})
+                            setWriteCeleb(false);        
+                            document.getElementById("textInputBox").value = "";
+                        }else if(canWrite){
                             const playerRef = doc(db, "games", gameId, "players", nameInput);
-                            setDoc(playerRef, { word: "" }, { merge: true })
-                        }, 5000)
+                            if(!guessedRight && isGamePlayed && document.getElementById("textInputBox").value.toUpperCase() == correctWord){
+                                setDoc(playerRef, {guessed: true}, {merge: true})
+                                var yourScoreProv =yourScore+timeLeft*2+50;
+                                setYourScore(yourScoreProv);
+                                setDoc(playerRef, {score: yourScoreProv}, {merge: true})
+                                for(var i = 0; i < players.length; i++){
+                                    if(players[i].knowsceleb){
+                                        const playerKnowsCelebRef = doc(db, "games", gameId, "players", players[i].id);
+                                        var playerKnowsCelebProvScore = players[i].score+timeLeft+50;
+                                        setDoc(playerKnowsCelebRef, {score: playerKnowsCelebProvScore}, {merge: true})
+                                    }
+                                }
+                                setGuessedRight(true);
+                                let modifiedWord = "";
+                                let lengthOfTheKnownWord =knownWord.length; 
+                                let didIModify=false;
+                                var underscoreNumber = 0;
+                                for(var i = 0; i < lengthOfTheKnownWord; i++){
+                                    if(knownWord[i] == '_'){
+                                        underscoreNumber++;
+                                    }
+                                }
+                                setCenterText(correctWord)
+                                if(underscoreNumber >= 2){
+                                    for (let i = 0; i < lengthOfTheKnownWord; i++) {
+                                        if (i % 2 === 0 && knownWord[i] === '_' && !didIModify){
+                                            modifiedWord += correctWord[Math.floor(i / 2)];
+                                            didIModify = true;
+                                        } else {
+                                            modifiedWord += knownWord[i];
+                                        }
+                                    }
+                                    setDoc(documentRef, {knownword: modifiedWord}, {merge:true});
+                                }
+                            }else if(document.getElementById("textInputBox").value.toUpperCase() == correctWord){
+                                alert("You cant spell it out for everyone >:(")
+                            }else{
+                                setDoc(playerRef, { word: document.getElementById("textInputBox").value }, { merge: true })
+                                setCanWrite(false);
+                                setTimeout(() => {
+                                    const playerRef = doc(db, "games", gameId, "players", nameInput);
+                                    setDoc(playerRef, { word: "" }, { merge: true })
+                                    setCanWrite(true);
+                                }, 1000+document.getElementById("textInputBox").value.length*50)
+                            }
+                            document.getElementById("textInputBox").value = "";
+                        }
                     }
                 } className={styles.enterBtn}>
                     <Image src = {`/sendmsg.png`}

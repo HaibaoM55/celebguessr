@@ -7,10 +7,16 @@
 }
 .input{
     display: block;
-    border: 2px solid gray;
+    border: none;
     outline: none;
-    height: 30px;
-    width: 250px;
+    border-radius: 15px;
+    padding: 1em;
+    background-color: #b4b4b4;
+    transition: 300ms ease-in-out;
+}
+.input:focus{
+    background-color: #f0f0f0;
+    transform: scale(1.15);
 }
 .inputParent{
     display: grid;
