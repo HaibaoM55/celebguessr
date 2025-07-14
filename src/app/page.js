@@ -5,6 +5,15 @@ import { useState, useEffect} from 'react';
 export default function Home() {
 	const [userPfpNumber, setUserPfpNumber] = useState(1);
 	const [UserPfp, setUserPfp] = useState("/profiles/guy1.png");
+	const [kicked, setKicked] = useState(false);
+
+	useEffect(() => {
+		const urlParams = new URLSearchParams(window.location.search);
+		const kickedParam = urlParams.get("kicked");
+		if (kickedParam) {
+			setKicked(kickedParam === "true");
+		}
+	}, []);
 	function minusPfp(){
 		setUserPfpNumber(userPfpNumber-1);
 	}
@@ -23,8 +32,25 @@ export default function Home() {
 	function askId(){
 		console.log("pula")
 	}
+	useEffect(() => {
+		if(kicked){
+			document.getElementById("kickedDiv").style.opacity = '100%';
+		}
+	}, [kicked])
 	return (
     	<div>
+			{(kicked) ? (
+				<div className={styles.overlay}>
+					<div className={styles.kickedDiv} id = "kickedDiv">
+						<p>You were kicked out of your last game</p>
+						<br />
+						<p>Please try again later</p>
+						<button onClick={() => {
+							setKicked(false);
+						}} className = {styles.OKBtn}>OK</button>
+					</div>
+				</div>
+			): (<></>)}
 			<div className={styles.icon}>
 				<Image src = "/icon.png" height={100} width={500} alt = "icon"/>
 			</div>

@@ -28,6 +28,7 @@ const addPlayer = async (gameId, playerId, profile, numid = 0) => {
             isHost: false,
             numid: numid,
             word: "",
+            kicked: false,
         });
         console.log("Player added!");
     } catch (e) {
@@ -289,6 +290,9 @@ export default function Home() {
         }
         for(var i = 0; i < players.length; i++){
             if(players[i].id == nameInput){
+                if(players[i].kicked){
+                    location.href = "/?kicked=true"
+                }
                 setKnowsCeleb(players[i].knowsceleb)
             }
         }
@@ -356,6 +360,26 @@ export default function Home() {
                         </div>
                             {players.map((player) => (
                                 <li key={player.id} className={styles.playerInfo}>
+                                    {(isHost && player.id != nameInput)? (
+                                        <button className={styles.kickBtn}
+                                        onClick={()=>{
+                                            const playerRef = doc(db, "games", gameId, "players", player.id);
+                                            setDoc(playerRef, {kicked: true}, {merge: true})
+                                            setTimeout(() => {
+                                                const playerRef1 = doc(db, "games", gameId, "players", player.id);
+                                                deleteDoc(playerRef1)
+                                                    .then(() => {
+                                                        console.log("Player removed successfully!");
+                                                    })
+                                                    .catch((error) => {
+                                                        console.error("Error removing player:", error);
+                                                    });
+                                            }, 750)
+                                        }}
+                                        >
+                                            Kick
+                                        </button>): (<></>)
+                                    }
                                     <Image
                                         src={`/profiles/guy${player.pfp}.png`}
                                         height={50}
@@ -392,6 +416,7 @@ export default function Home() {
                                             )}
                                         </>
                                     ) : (<></>)}
+                                    
                                     {(player.word != "") ? (
                                         <div className={styles.DialogueBox} id = "dialogue_box">
                                             {player.word}
