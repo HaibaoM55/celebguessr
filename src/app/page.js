@@ -37,13 +37,14 @@ export default function Home() {
 		const snapshot = await getCountFromServer(playersRef);
 		return snapshot.data().count
 	};
-	const numberOfPublicServers = 10;
 	async function openPublic(){
-		for(var i = 1; i <= numberOfPublicServers; i++){
+		var i = 1;
+		while(true){
 			var playerCount = await getPlayerCount(i);
 			if(playerCount < 10){
 				location.href = `/play/public${i}`;
 			}
+			i++;
 		}
 	}
 	function openPrivate(){
