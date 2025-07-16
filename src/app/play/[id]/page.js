@@ -3,7 +3,7 @@
 import Image from "next/image";
 import styles from "../../page.module.css";
 import { useState, useEffect, use } from "react";
-import db from "../../firebaseconfig.js";
+import {db} from "../../firebaseconfig.js";
 import {useInterval} from "../../useinterval"
 import {
     collection,
@@ -179,6 +179,12 @@ export default function Home() {
             }
         }
     }, [game, isGamePlayed, knowsCeleb, guessedRight, players, game])
+    useEffect(() => {
+        if(isHost && players.length == 1){
+            const documentRef = doc(db, "games", gameId);
+            setDoc(documentRef, {word: "", knownword: "", isGamePlayed: false, roundStartTime: 0}, {merge: true});
+        }
+    }, [players,isHost])
     useInterval(() => {
         let milliseconds = new Date().valueOf();
         let seconds = Math.floor( milliseconds / 1000);
@@ -342,6 +348,9 @@ export default function Home() {
                 isGamePlayed: {isGamePlayed ? isGamePlayed.toString() : "undefined"}<br />
                 everyoneGuessedRight: {everyoneGuessedRight ? everyoneGuessedRight.toString() : "undefined"}<br />
             </h1> */}
+            <p className={styles.gameId}>
+                Room code: {gameId}
+            </p>
             <div className={styles.icon}>
                 <Image src="/icon.png" height={100} width={500} alt="icon" />
             </div>

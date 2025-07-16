@@ -214,7 +214,7 @@
     background-color: #cc0000;
     transform: scale(0.95)  translateY(-20px);
 }
-.kickedDiv {
+.overlayDiv{
     position: absolute;
     background-color: #d6d6d6;
     top: 50%;
@@ -262,4 +262,119 @@
     justify-content: center;
     align-items: center;
     pointer-events: auto; /* interacțiune permisă pe overlay */
+}
+.aboutBtn{
+    margin-top: 10px;
+    border: none;
+    color: #fff;
+    background-color: #5079fe;
+    font-size: 30px;
+    height: 50px;
+    width: 200px;
+    border-radius: 1rem;
+    transition: 200ms ease-in-out;
+    display: block;
+}
+.aboutBtn:hover{
+    background-color: #003cff;
+    cursor: pointer;
+}
+.aboutBtnDiv{
+    display: grid;
+    place-items: center;
+}
+.playDivP{
+    display:inline;
+}
+.pBtnDiv{
+    display: grid;
+    place-items: center;
+}
+.privateBtn{
+    border: none;
+    color: #fff;
+    background-color: #ff6464;
+    font-size: 30px;
+    height: 50px;
+    width: 200px;
+    border-radius: 1rem;
+    transition: 200ms ease-in-out;
+    display: block;
+}
+.privateBtn:hover{
+    background-color: #ff0000;
+    cursor: pointer;
+}
+.publicBtn{
+    margin-top: 10px;
+    border: none;
+    color: #fff;
+    background-color: #6479ff;
+    font-size: 30px;
+    height: 50px;
+    width: 200px;
+    border-radius: 1rem;
+    transition: 200ms ease-in-out;
+    display: block;
+}
+.publicBtn:hover{
+    background-color: #0048ff;
+    cursor: pointer;
+}
+.codeText{
+    width: 200px;
+    background-color: #c7c7c7;
+    color: #4e4e4e;
+    border: none;
+    transition: 300ms ease-in-out;
+    height: 23px;
+}
+.codeText:focus{
+    background-color: #4e4e4e;
+    color: #c7c7c7;
+    outline: none;
+}
+.enterPrivateBtn{
+    background-color: #28a745;
+    color: #fff;
+    font-size: 16px;
+    border: none;
+    height: 23px;
+    width: 60px;
+    cursor: pointer;
+    transition: 0.3s ease;
+    transform: translate(70px, -23px)
+}
+.enterPrivateBtn:hover {
+    background-color: #218838; 
+}
+.enterPrivateBtn:active {
+    background-color: #1e7e34;
+}
+.gameId{
+    text-align: start;
+    font-size: clamp(8px, 5vw, 20px);
+}
+.aboutText{
+    text-align: start;
+}
+.aboutText a{
+    color: #007bff;
+    text-decoration: dashed;
+}
+.closeOverlayBtn{
+    position: absolute;
+    top: 0px;
+    right: 5px;
+    background-color: transparent;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #ff4040;
+}
+.closeOverlayBtn:hover{
+    color: #ff0000;
+}
+.closeOverlayBtn:active{
+    color: #cc0000;
 }
