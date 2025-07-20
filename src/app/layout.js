@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Ads from "./components/Ads"; // Make sure this path is correct!
+import Ads from "./components/Ads";
+import Script from "next/script"; // Add this import
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,13 +21,12 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <head>
-        <script
-        async
-        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"
-        ></script>
-      </head>
+      <head />
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <Script
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"
+          strategy="afterInteractive"
+        />
         {children}
         <Ads />
       </body>
