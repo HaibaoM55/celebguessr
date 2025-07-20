@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Ads from "./components/Ads"; // Make sure this path is correct!
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,18 +21,14 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        <script async custom-element="amp-ad" src="https://cdn.ampproject.org/v0/amp-ad-0.1.js"></script>
+        <script
+        async
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"
+        ></script>
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         {children}
-        <amp-ad width="100vw" height="320"
-          type="adsense"
-          data-ad-client="ca-pub-8419504558731883"
-          data-ad-slot="8577910669"
-          data-auto-format="rspv"
-          data-full-width="">
-          <div overflow=""></div>
-        </amp-ad>
+        <Ads />
       </body>
     </html>
   );
